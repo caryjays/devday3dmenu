@@ -75,6 +75,24 @@ button, input { font: inherit; color: inherit; }
   backdrop-filter: blur(6px);
 }
 .view-btns button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tabs { display: flex; gap: 6px; }
+.tabs button {
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+#merchant input {
+  font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 8px 12px; width: 100%;
+}
+#merchant label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13.5px; }
+.m-banner {
+  font-size: 13px; color: #9c2b2b; background: color-mix(in srgb, #9c2b2b 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, #9c2b2b 35%, var(--line)); border-radius: 10px; padding: 8px 12px; margin: 0;
+}
+#mTickets .item { cursor: default; }
+#mTickets .item .addons { margin-top: 8px; }
+#mTickets .item .addons .btn { flex: 0 1 auto; padding: 8px 12px; font-size: 13px; }
 .stage-bottom {
   position: absolute; left: 14px; right: 14px; bottom: 14px; display: flex; justify-content: space-between;
   align-items: flex-end; gap: 8px; pointer-events: none; flex-wrap: wrap;
@@ -211,6 +229,19 @@ button, input { font: inherit; color: inherit; }
       <nav class="links" id="links" aria-label="Find the cart"></nav>
     </header>
 
+    <div class="tabs" role="tablist" aria-label="Storefront view">
+      <button type="button" id="tabOrder" role="tab" aria-pressed="true">Order</button>
+      <button type="button" id="tabMerchant" role="tab" aria-pressed="false">Merchant</button>
+    </div>
+    <section id="merchant" hidden aria-label="Merchant queue" style="display:flex;flex-direction:column;gap:18px;flex:1">
+      <p class="m-banner" id="mBanner" hidden role="alert"></p>
+      <div id="mBoard" style="display:flex;flex-direction:column;gap:12px">
+        <div class="order-row"><span class="chip">Merchant · on this device</span><button class="btn" id="mClear" type="button" style="flex:0 1 auto">Clear closed</button></div>
+        <div id="mCounts" class="order-row" style="flex-wrap:wrap;justify-content:flex-start"></div>
+        <div id="mTickets" class="menu"></div>
+        <p class="hint" style="margin:0">Orders stay on this device.</p>
+      </div>
+    </section>
     <form id="orderForm" style="display:flex;flex-direction:column;gap:18px;flex:1">
       <fieldset style="border:0;margin:0;padding:0">
         <legend class="section-title" style="width:100%"><span>Choose your snack</span><span class="sample" id="sampleTag" hidden>Sample menu</span></legend>
@@ -235,6 +266,7 @@ button, input { font: inherit; color: inherit; }
         <div class="cta">
           <a class="btn primary" id="orderBtn" target="_blank" rel="noopener">Order on LINE</a>
           <button type="button" class="btn" id="copyBtn">Copy order</button>
+          <button type="button" class="btn" id="checkoutBtn">Send to kitchen</button>
         </div>
       </div>
     </form>
@@ -700,6 +732,98 @@ $('copyBtn').addEventListener('click', async () => {
   camera.position.set(3.4, 2.6, 5.4);
   $('loading').hidden = true;
   renderTune();
+})();
+</script>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'merchantOrders';
+  var SEQ = 'merchantSeq';
+  var NEXT = { queued: 'preparing', preparing: 'ready', ready: 'done' };
+  var el = {
+    tabOrder: document.getElementById('tabOrder'),
+    tabMerchant: document.getElementById('tabMerchant'),
+    orderForm: document.getElementById('orderForm'),
+    merchant: document.getElementById('merchant'),
+    clear: document.getElementById('mClear'),
+    counts: document.getElementById('mCounts'),
+    tickets: document.getElementById('mTickets'),
+    checkout: document.getElementById('checkoutBtn')
+  };
+  function node(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = String(text);
+    return n;
+  }
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; } }
+  function save(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {} }
+  function nextTicket() {
+    var n = 1;
+    try { n = parseInt(localStorage.getItem(SEQ) || '1', 10) || 1; localStorage.setItem(SEQ, String(n + 1)); } catch (e) {}
+    return 'M-' + String(n).padStart(3, '0');
+  }
+  function render() {
+    var orders = load();
+    var count = function (s) { return orders.filter(function (o) { return o.status === s; }).length; };
+    el.counts.replaceChildren(
+      node('span', 'chip', 'Queued ' + count('queued')),
+      node('span', 'chip', 'Preparing ' + count('preparing')),
+      node('span', 'chip', 'Ready ' + count('ready')),
+      node('span', 'chip', 'Done ' + count('done')));
+    if (!orders.length) { el.tickets.replaceChildren(node('div', 'hint', 'No orders yet — send one from the Order tab.')); return; }
+    el.tickets.replaceChildren.apply(el.tickets, orders.map(function (o) {
+      var card = node('article', 'item');
+      card.appendChild(node('span', 'dot'));
+      var main = node('span');
+      main.appendChild(node('span', 't', o.ticket + ' · ' + o.status));
+      main.appendChild(document.createElement('br'));
+      main.appendChild(node('span', 'd', o.qty + ' × ' + o.name + (o.addons.length ? ' [' + o.addons.join(', ') + ']' : '') + ' · ' + o.time));
+      var actions = node('span', 'addons');
+      if (NEXT[o.status]) {
+        var adv = node('button', 'btn primary', 'Advance → ' + NEXT[o.status]);
+        adv.type = 'button';
+        adv.addEventListener('click', function () {
+          var all = load();
+          var f = all.filter(function (x) { return x.id === o.id; })[0];
+          if (f) { f.status = NEXT[f.status]; save(all); render(); }
+        });
+        actions.appendChild(adv);
+      }
+      if (o.status !== 'done') {
+        var cancel = node('button', 'btn', 'Cancel');
+        cancel.type = 'button';
+        cancel.addEventListener('click', function () { save(load().filter(function (x) { return x.id !== o.id; })); render(); });
+        actions.appendChild(cancel);
+      }
+      main.appendChild(actions);
+      card.appendChild(main);
+      card.appendChild(node('span', 'price', money(o.total)));
+      return card;
+    }));
+  }
+  function selectTab(m) {
+    el.tabOrder.setAttribute('aria-pressed', String(!m));
+    el.tabMerchant.setAttribute('aria-pressed', String(m));
+    el.orderForm.hidden = m;
+    el.merchant.hidden = !m;
+    if (m) render();
+  }
+  el.tabOrder.addEventListener('click', function () { selectTab(false); });
+  el.tabMerchant.addEventListener('click', function () { selectTab(true); });
+  el.clear.addEventListener('click', function () { save(load().filter(function (o) { return o.status !== 'done'; })); render(); });
+  el.checkout.addEventListener('click', function () {
+    var item = currentItem();
+    var adds = CONFIG.addons.filter(function (a) { var b = document.getElementById('addon-' + a.id); return b && b.checked; });
+    var each = item.price + adds.reduce(function (t, a) { return t + a.price; }, 0);
+    var orders = load();
+    orders.push({ id: Date.now(), ticket: nextTicket(), name: item.name, qty: qty,
+      addons: adds.map(function (a) { return a.name; }), total: each * qty, status: 'queued', time: new Date().toLocaleTimeString() });
+    save(orders);
+    toast('Sent ' + orders[orders.length - 1].ticket);
+    if (!el.merchant.hidden) render();
+  });
+  render();
 })();
 </script>
 </body>
