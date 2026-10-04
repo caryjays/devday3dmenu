@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="A 3D menu for the Cong Siu Bing street cart. Built with ChatGPT + CAD.show.">
-<title>Cong Siu Bing Cart</title>
+<meta name="description" content="A 3D menu for the 小巷食堂 Xiaoxiang Shitang fried-snack cart. Built with ChatGPT + CAD.show.">
+<title>Xiaoxiang Shitang 3D Menu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap">
@@ -187,12 +187,12 @@ button, input { font: inherit; color: inherit; }
       <span class="chip">Drag to turn · scroll to zoom</span>
       <div class="view-btns" role="group" aria-label="Camera">
         <button type="button" id="viewCart" aria-pressed="false">Whole cart</button>
-        <button type="button" id="viewFood" aria-pressed="true">Counter</button>
+        <button type="button" id="viewFood" aria-pressed="true">Close-up</button>
       </div>
     </div>
     <div class="stage-bottom">
       <div class="now-showing">
-        <div class="label">On the griddle</div>
+        <div class="label">Now showing</div>
         <div class="name" id="nowName">…</div>
       </div>
       <div class="hint" id="dropHint">Drop a .glb here to preview it</div>
@@ -213,7 +213,7 @@ button, input { font: inherit; color: inherit; }
 
     <form id="orderForm" style="display:flex;flex-direction:column;gap:18px;flex:1">
       <fieldset style="border:0;margin:0;padding:0">
-        <legend class="section-title" style="width:100%"><span>Choose your bing</span><span class="sample" id="sampleTag" hidden>Sample menu</span></legend>
+        <legend class="section-title" style="width:100%"><span>Choose your snack</span><span class="sample" id="sampleTag" hidden>Sample menu</span></legend>
         <div class="menu" id="menu"></div>
       </fieldset>
 
@@ -241,7 +241,7 @@ button, input { font: inherit; color: inherit; }
 
     <div class="credit">
       <span class="mark">3D</span>
-      <span>Built with <b>ChatGPT + CAD.show</b>. Cart and food modelled from photos with Tripo in CAD.show.</span>
+      <span>Built with <b>ChatGPT + CAD.show</b>. Cart and snacks modelled with Tripo in CAD.show.</span>
     </div>
   </aside>
 </div>
@@ -252,32 +252,27 @@ button, input { font: inherit; color: inherit; }
 <script>
 /* ===================== Edit this block ===================== */
 const CONFIG = {
-  sampleMenu: true,               // set false once the real menu is in
+  sampleMenu: false,
   shop: {
-    name: 'Cong Siu Bing',
-    local: '葱烧饼',
-    kicker: 'Street cart · griddled to order',
-    tagline: 'Flaky scallion flatbread off the griddle. Pick one and watch it land on the counter.',
-    currency: '$',
+    name: 'Xiaoxiang Shitang',
+    local: '小巷食堂',
+    kicker: 'Taipei street cart · fried to order',
+    tagline: 'Classic Taiwanese fried snacks, made fresh at the cart. Pick one to see it up close.',
+    currency: 'NT$',
+    decimals: 0,
     links: { x: '', line: '', menu: '' },   // full URLs
   },
-  cart: {
-    model: null,                  // e.g. 'models/cart.glb'
-    width: 2.4,                   // world units across the longest side
-    rotY: 0,                      // degrees, if the GLB faces the wrong way
-    anchor: { x: 0.5, y: 0.5, z: 0.85 },   // where food sits, as 0–1 of the cart's bounding box
-    foodSize: 0.42,
-  },
+  cart: { model: 'models/cart.glb', width: 2.4, rotY: 0, foodSize: 0.8 },
+  pedestal: { x: 1.9, z: 1.0, height: 0.55, radius: 0.55 },
   items: [
-    { id: 'classic', name: 'Classic Scallion', local: '原味', desc: 'Laminated dough, scallion, sesame.', price: 3.5, model: null, look: 'plain' },
-    { id: 'egg', name: 'Egg & Scallion', local: '加蛋', desc: 'Egg cracked on the griddle and folded in.', price: 4.5, model: null, look: 'egg' },
-    { id: 'pork', name: 'Pork & Scallion', local: '豬肉', desc: 'Seasoned minced pork, crisp edges.', price: 5.5, model: null, look: 'pork' },
-    { id: 'cheese', name: 'Cheese Pull', local: '起司', desc: 'Melted cheese, scallion, black pepper.', price: 5.0, model: null, look: 'cheese' },
+    { id: 'chicken', name: 'Taiwanese Popcorn Chicken', local: '鹽酥雞', desc: 'Boneless thigh, crisp sweet-potato-starch crust, pepper salt and fried basil.', portion: '~180 g', price: 90, model: 'models/fried-chicken.glb' },
+    { id: 'squid', name: 'Crispy Fried Squid', local: '炸魷魚', desc: 'Squid strips and tentacles in a thin crisp coating, with basil and pepper salt.', portion: '150–170 g', price: 95, model: 'models/calamari.glb' },
+    { id: 'balls', name: 'Sweet Potato Balls', local: '地瓜球', desc: 'Puffed, hollow and chewy with a thin crisp shell. Served plain.', portion: '12 pcs', price: 55, model: 'models/cheese-puff.glb' },
+    { id: 'fishcake', name: 'Fried Fish Cake', local: '炸甜不辣', desc: 'Springy fish-cake strips with crisp edges, finished with pepper salt.', portion: '~12 strips', price: 50, model: null, look: 'strips' },
   ],
   addons: [
-    { id: 'chili', name: 'Chili crisp', price: 0.5 },
-    { id: 'extra-egg', name: 'Extra egg', price: 1.0 },
-    { id: 'basil', name: 'Thai basil', price: 0.5 },
+    { id: 'spicy', name: 'Make it spicy 加辣', price: 0 },
+    { id: 'tea', name: 'Unsweetened tea 無糖茶', price: 30 },
   ],
 };
 /* =========================================================== */
@@ -285,7 +280,7 @@ const CONFIG = {
 const PROC_ANCHOR = { x: 0.69, y: 0.49, z: 0.74 };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (id) => document.getElementById(id);
-const money = (n) => CONFIG.shop.currency + n.toFixed(2);
+const money = (n) => CONFIG.shop.currency + ' ' + n.toFixed(CONFIG.shop.decimals ?? 2);
 
 /* ---------- panel ---------- */
 const ICONS = {
@@ -312,11 +307,11 @@ function renderPanel() {
     <label class="item">
       <input type="radio" name="item" id="item-${it.id}" value="${it.id}" ${i === 0 ? 'checked' : ''}>
       <span class="dot" aria-hidden="true"></span>
-      <span><span class="t">${it.name}${it.local ? `<small>${it.local}</small>` : ''}</span><br><span class="d">${it.desc}</span></span>
+      <span><span class="t">${it.name}${it.local ? `<small>${it.local}</small>` : ''}</span><br><span class="d">${it.desc}${it.portion ? ' · ' + it.portion : ''}</span></span>
       <span class="price">${money(it.price)}</span>
     </label>`).join('');
   $('addons').innerHTML = CONFIG.addons.map((a) => `
-    <label class="addon"><input type="checkbox" id="addon-${a.id}" value="${a.id}">${a.name} <span class="price">+${money(a.price)}</span></label>`).join('');
+    <label class="addon"><input type="checkbox" id="addon-${a.id}" value="${a.id}">${a.name} <span class="price">${a.price ? '+' + money(a.price) : 'Free'}</span></label>`).join('');
 }
 
 let qty = 1;
@@ -488,6 +483,19 @@ function makeBing(look) {
   return g;
 }
 
+function makeStrips() {
+  const g = new THREE.Group();
+  const boat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.3), new THREE.MeshStandardMaterial({ color: 0xb98a5a, roughness: 0.9 }));
+  boat.position.y = 0.03; g.add(boat);
+  const m = new THREE.MeshStandardMaterial({ color: 0xd8a24a, roughness: 0.6 });
+  for (let i = 0; i < 12; i++) {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.035, 0.045), m);
+    s.position.set((i % 3 - 1) * 0.04, 0.08 + Math.floor(i / 4) * 0.03, ((i % 4) - 1.5) * 0.06);
+    s.rotation.y = (i * 0.37) % 0.5 - 0.25; g.add(s);
+  }
+  return g;
+}
+
 /* --- state --- */
 let cartPivot = null;
 let cartAnchor = PROC_ANCHOR;
@@ -499,7 +507,15 @@ const tween = (dur, fn, done) => { if (reduceMotion) { fn(1); done && done(); re
 const ease = (p) => 1 - Math.pow(1 - p, 3);
 const back = (p) => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
 
+const ped = CONFIG.pedestal;
+const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(ped.radius, ped.radius * 1.08, ped.height, 48), new THREE.MeshStandardMaterial({ color: 0xd9d2c3, roughness: 0.85 }));
+pedestal.position.set(ped.x, ped.height / 2, ped.z); pedestal.castShadow = true; pedestal.receiveShadow = true;
+scene.add(pedestal);
 function computeAnchor() {
+  anchorPoint = new THREE.Vector3(ped.x, ped.height, ped.z);
+  foodSlot.position.copy(anchorPoint);
+}
+function computeAnchorOld() {
   cartHolder.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(cartHolder);
   const s = box.getSize(new THREE.Vector3());
@@ -514,7 +530,7 @@ async function setCart(source, isProcedural) {
   cartHolder.clear();
   cartHolder.add(pivot);
   cartPivot = pivot;
-  cartAnchor = isProcedural ? PROC_ANCHOR : CONFIG.cart.anchor;
+  cartAnchor = PROC_ANCHOR;
   computeAnchor();
 }
 
@@ -525,7 +541,7 @@ async function getFood(item) {
     try { obj = prep(await loadGLB(item.model)); }
     catch (e) { console.warn('[csb] food model failed, using stand-in', item.model, e); }
   }
-  if (!obj) obj = prep(makeBing(item.look || 'plain'));
+  if (!obj) obj = prep(item.look === 'strips' ? makeStrips() : makeBing(item.look || 'plain'));
   const pivot = fit(obj, CONFIG.cart.foodSize, item.rotY || 0);
   pivot.visible = false;
   foodSlot.add(pivot);
@@ -556,10 +572,10 @@ function flyTo(mode) {
   if (mode === 'food') {
     const d = CONFIG.cart.foodSize;
     toT = anchorPoint.clone().add(new THREE.Vector3(0, d * 0.15, 0));
-    toP = toT.clone().add(new THREE.Vector3(d * 2.4, d * 2.2, d * 3.6));
+    toP = toT.clone().add(new THREE.Vector3(d * 1.2, d * 1.4, d * 2.4));
   } else {
-    toT = new THREE.Vector3(0, 1.0, 0);
-    toP = new THREE.Vector3(3.6, 2.6, 4.6);
+    toT = new THREE.Vector3(0.8, 0.8, 0.4);
+    toP = new THREE.Vector3(3.4, 2.6, 5.4);
   }
   tween(900, (p) => { const e = ease(p); camera.position.lerpVectors(fromP, toP, e); controls.target.lerpVectors(fromT, toT, e); });
 }
@@ -662,8 +678,8 @@ $('copyBtn').addEventListener('click', async () => {
   await showFood(currentItem());
   // open on the counter, slightly wide
   const d = CONFIG.cart.foodSize;
-  controls.target.copy(anchorPoint).add(new THREE.Vector3(-0.4, 0.1, 0));
-  camera.position.copy(controls.target).add(new THREE.Vector3(d * 6, d * 4.2, d * 8));
+  controls.target.set(0.8, 0.8, 0.4);
+  camera.position.set(3.4, 2.6, 5.4);
   $('loading').hidden = true;
   renderTune();
 })();

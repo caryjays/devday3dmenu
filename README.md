@@ -1,6 +1,6 @@
-# DevDay 3D Menu: Cong Siu Bing
+# DevDay 3D Menu: 小巷食堂 Xiaoxiang Shitang
 
-A 3D storefront for a street-food cart. Pick a bing from the menu and it lands on the cart's counter.
+A 3D storefront for a Taipei fried-snack cart. Pick a snack and it appears beside the cart.
 
 Built with **ChatGPT + CAD.show**. The cart and food are modelled from photos with Tripo in CAD.show.
 
