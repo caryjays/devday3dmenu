@@ -32,3 +32,4 @@ The menu, prices and links all live in the same `CONFIG` block (`shop`, `items`,
 
 - Cary Jay Forest: 3D storefront, Tripo models
 - Zhu Lin: merchant view and order queue, pay options
+- Ethan Chuang ([@e40125](https://github.com/e40125)): contributor
