@@ -2,7 +2,7 @@
 
 A 3D storefront for a Taipei fried-snack cart. Pick a snack and it appears beside the cart.
 
-Built with **ChatGPT + CAD.show**. The cart and food are modelled from photos with Tripo in CAD.show.
+Built with **ChatGPT + [CAD.show](https://cad.show/?utm_source=devday3dmenu-github&utm_medium=referral&utm_campaign=devday-2026)**. The cart and food are modelled with Tripo in CAD.show.
 
 ## Run it
 
