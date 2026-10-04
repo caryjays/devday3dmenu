@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A 3D menu for the Cong Siu Bing street cart. Built with ChatGPT + CAD.show.">
+<title>Cong Siu Bing Cart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap">
+<style>
+body { margin: 0; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+
+/* Layout: a street-side 3D stage on the left, the cart's order slip on the right; stacks on phones. */
+:root {
+  --bg: #f1f4ec;
+  --stage: #e4eadd;
+  --surface: #ffffff;
+  --ink: #1d251f;
+  --muted: #5d6a5f;
+  --line: #d6ddd0;
+  --accent: #2c7a47;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2efe5;
+  --crust: #b9741c;
+  --font-display: "Bricolage Grotesque", "Noto Sans TC", system-ui, sans-serif;
+  --font-body: "Figtree", "Noto Sans TC", system-ui, -apple-system, sans-serif;
+  --font-cjk: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111612; --stage: #172019; --surface: #1a221c; --ink: #e8eee6; --muted: #9aa89c;
+    --line: #2b362e; --accent: #5cbf7e; --accent-ink: #0d140f; --accent-soft: #1f3326; --crust: #f0b450;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111612; --stage: #172019; --surface: #1a221c; --ink: #e8eee6; --muted: #9aa89c;
+  --line: #2b362e; --accent: #5cbf7e; --accent-ink: #0d140f; --accent-soft: #1f3326; --crust: #f0b450;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+* { box-sizing: border-box; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app {
+  display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: 16px; height: 100%; padding: 16px;
+}
+.stage {
+  position: relative; min-height: 0; border-radius: 18px; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 20%, var(--surface) 0%, var(--stage) 70%);
+  border: 1px solid var(--line);
+}
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.stage-top {
+  position: absolute; inset: 14px 14px auto 14px; display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; pointer-events: none; flex-wrap: wrap;
+}
+.stage-top > * { pointer-events: auto; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid var(--line);
+  font-size: 12.5px; font-weight: 600; color: var(--muted); backdrop-filter: blur(6px);
+}
+.chip b { color: var(--ink); font-weight: 700; }
+.view-btns { display: flex; gap: 6px; }
+.view-btns button {
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.view-btns button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.stage-bottom {
+  position: absolute; left: 14px; right: 14px; bottom: 14px; display: flex; justify-content: space-between;
+  align-items: flex-end; gap: 8px; pointer-events: none; flex-wrap: wrap;
+}
+.now-showing { pointer-events: none; }
+.now-showing .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.now-showing .name { font-family: var(--font-display); font-weight: 800; font-size: clamp(22px, 3vw, 34px); line-height: 1.05; }
+.hint { font-size: 12px; color: var(--muted); }
+.loading {
+  position: absolute; inset: 0; display: grid; place-items: center; font-weight: 600; color: var(--muted);
+  background: color-mix(in srgb, var(--stage) 70%, transparent);
+}
+.drop-veil {
+  position: absolute; inset: 10px; border: 2px dashed var(--accent); border-radius: 14px; display: grid;
+  place-items: center; font-weight: 700; color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 80%, transparent);
+}
+.toast {
+  position: absolute; left: 50%; top: 58px; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+  padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; max-width: calc(100% - 28px);
+}
+
+.panel {
+  min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px;
+}
+.shop-head { display: flex; flex-direction: column; gap: 6px; }
+.shop-kicker { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.shop-name { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 3.2vw, 40px); line-height: 1; letter-spacing: -.01em; text-wrap: balance; }
+.shop-local { font-family: var(--font-cjk); font-weight: 700; color: var(--crust); font-size: 20px; margin-left: 6px; letter-spacing: .04em; }
+.shop-tag { margin: 0; color: var(--muted); }
+.links { display: flex; gap: 8px; flex-wrap: wrap; }
+.links a, .links span {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 600; font-size: 13px;
+  padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line); color: var(--ink);
+}
+.links a:hover { border-color: var(--accent); color: var(--accent); }
+.links span { color: var(--muted); border-style: dashed; }
+.links svg { width: 15px; height: 15px; fill: currentColor; }
+
+.section-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0 0 8px; font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.sample { font-size: 11px; letter-spacing: 0; text-transform: none; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.menu { display: flex; flex-direction: column; gap: 8px; }
+.item {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.item:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.item input { position: absolute; opacity: 0; pointer-events: none; }
+.item .dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; }
+.item .dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: transparent; }
+.item:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.item:has(input:checked) .dot { border-color: var(--accent); }
+.item:has(input:checked) .dot::after { background: var(--accent); }
+.item:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.item .t { font-weight: 700; }
+.item .t small { font-family: var(--font-cjk); font-weight: 500; color: var(--muted); margin-left: 6px; font-size: 13px; }
+.item .d { color: var(--muted); font-size: 13.5px; }
+.price { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+.addons { display: flex; flex-wrap: wrap; gap: 8px; }
+.addon {
+  display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line);
+  cursor: pointer; font-weight: 600; font-size: 13.5px;
+}
+.addon input { accent-color: var(--accent); margin: 0; }
+.addon:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.addon .price { color: var(--muted); font-weight: 600; }
+
+.order { margin-top: auto; border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+.order-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.qty button { width: 36px; height: 36px; border: 0; background: transparent; cursor: pointer; font-size: 18px; font-weight: 600; }
+.qty output { min-width: 28px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.total { font-family: var(--font-display); font-weight: 800; font-size: 30px; font-variant-numeric: tabular-nums; }
+.summary { font-size: 13px; color: var(--muted); user-select: all; }
+.cta { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  flex: 1 1 auto; display: inline-flex; justify-content: center; align-items: center; gap: 8px; text-decoration: none;
+  padding: 12px 16px; border-radius: 12px; font-weight: 700; border: 1px solid var(--line); background: transparent; cursor: pointer;
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+
+.credit { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; }
+.credit .mark { width: 26px; height: 26px; border-radius: 7px; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-weight: 800; font-size: 11px; flex: none; }
+.credit b { color: var(--ink); }
+
+.tune {
+  position: absolute; right: 14px; top: 56px; width: min(260px, calc(100% - 28px)); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 12px; font-size: 12px; display: flex; flex-direction: column; gap: 6px; max-height: calc(100% - 120px); overflow: auto;
+}
+.tune label { display: grid; grid-template-columns: 70px minmax(0, 1fr) 42px; gap: 6px; align-items: center; }
+.tune input[type="range"] { width: 100%; accent-color: var(--accent); }
+.tune pre { margin: 4px 0 0; font-size: 11px; white-space: pre-wrap; word-break: break-all; background: var(--bg); padding: 8px; border-radius: 8px; user-select: all; }
+
+@media (max-width: 860px) {
+  html, body { height: auto; }
+  .app { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .stage { height: min(64vh, 520px); }
+  .panel { overflow: visible; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <section class="stage" id="stage" aria-label="3D view of the cart">
+    <div class="stage-top">
+      <span class="chip">Drag to turn · scroll to zoom</span>
+      <div class="view-btns" role="group" aria-label="Camera">
+        <button type="button" id="viewCart" aria-pressed="false">Whole cart</button>
+        <button type="button" id="viewFood" aria-pressed="true">Counter</button>
+      </div>
+    </div>
+    <div class="stage-bottom">
+      <div class="now-showing">
+        <div class="label">On the griddle</div>
+        <div class="name" id="nowName">…</div>
+      </div>
+      <div class="hint" id="dropHint">Drop a .glb here to preview it</div>
+    </div>
+    <div class="loading" id="loading">Loading the cart…</div>
+    <div class="drop-veil" id="dropVeil" hidden>Drop .glb — name it “cart…” to swap the cart</div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="tune" id="tune" hidden></div>
+  </section>
+
+  <aside class="panel">
+    <header class="shop-head">
+      <div class="shop-kicker" id="shopKicker"></div>
+      <h1 class="shop-name"><span id="shopName"></span><span class="shop-local" id="shopLocal"></span></h1>
+      <p class="shop-tag" id="shopTag"></p>
+      <nav class="links" id="links" aria-label="Find the cart"></nav>
+    </header>
+
+    <form id="orderForm" style="display:flex;flex-direction:column;gap:18px;flex:1">
+      <fieldset style="border:0;margin:0;padding:0">
+        <legend class="section-title" style="width:100%"><span>Choose your bing</span><span class="sample" id="sampleTag" hidden>Sample menu</span></legend>
+        <div class="menu" id="menu"></div>
+      </fieldset>
+
+      <fieldset style="border:0;margin:0;padding:0">
+        <legend class="section-title">Add-ons</legend>
+        <div class="addons" id="addons"></div>
+      </fieldset>
+
+      <div class="order">
+        <div class="order-row">
+          <div class="qty" aria-label="Quantity">
+            <button type="button" id="qtyMinus" aria-label="One fewer">−</button>
+            <output id="qty">1</output>
+            <button type="button" id="qtyPlus" aria-label="One more">+</button>
+          </div>
+          <div class="total" id="total">—</div>
+        </div>
+        <div class="summary" id="summary"></div>
+        <div class="cta">
+          <a class="btn primary" id="orderBtn" target="_blank" rel="noopener">Order on LINE</a>
+          <button type="button" class="btn" id="copyBtn">Copy order</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="credit">
+      <span class="mark">3D</span>
+      <span>Built with <b>ChatGPT + CAD.show</b>. Cart and food modelled from photos with Tripo in CAD.show.</span>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/* ===================== Edit this block ===================== */
+const CONFIG = {
+  sampleMenu: true,               // set false once the real menu is in
+  shop: {
+    name: 'Cong Siu Bing',
+    local: '葱烧饼',
+    kicker: 'Street cart · griddled to order',
+    tagline: 'Flaky scallion flatbread off the griddle. Pick one and watch it land on the counter.',
+    currency: '$',
+    links: { x: '', line: '', menu: '' },   // full URLs
+  },
+  cart: {
+    model: null,                  // e.g. 'models/cart.glb'
+    width: 2.4,                   // world units across the longest side
+    rotY: 0,                      // degrees, if the GLB faces the wrong way
+    anchor: { x: 0.5, y: 0.5, z: 0.85 },   // where food sits, as 0–1 of the cart's bounding box
+    foodSize: 0.42,
+  },
+  items: [
+    { id: 'classic', name: 'Classic Scallion', local: '原味', desc: 'Laminated dough, scallion, sesame.', price: 3.5, model: null, look: 'plain' },
+    { id: 'egg', name: 'Egg & Scallion', local: '加蛋', desc: 'Egg cracked on the griddle and folded in.', price: 4.5, model: null, look: 'egg' },
+    { id: 'pork', name: 'Pork & Scallion', local: '豬肉', desc: 'Seasoned minced pork, crisp edges.', price: 5.5, model: null, look: 'pork' },
+    { id: 'cheese', name: 'Cheese Pull', local: '起司', desc: 'Melted cheese, scallion, black pepper.', price: 5.0, model: null, look: 'cheese' },
+  ],
+  addons: [
+    { id: 'chili', name: 'Chili crisp', price: 0.5 },
+    { id: 'extra-egg', name: 'Extra egg', price: 1.0 },
+    { id: 'basil', name: 'Thai basil', price: 0.5 },
+  ],
+};
+/* =========================================================== */
+
+const PROC_ANCHOR = { x: 0.69, y: 0.49, z: 0.74 };
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (id) => document.getElementById(id);
+const money = (n) => CONFIG.shop.currency + n.toFixed(2);
+
+/* ---------- panel ---------- */
+const ICONS = {
+  x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.8 3h3.1l-6.8 7.8L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z"/></svg>',
+  line: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.1.8.2.9.5.1.3.1.7 0 1l-.1.9c0 .3-.2 1 .9.6 1.1-.5 5.9-3.5 8-6C21.4 14.3 22 12.7 22 11c0-4.4-4.5-8-10-8z"/></svg>',
+  menu: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12a1 1 0 011 1v17l-3-2-2 2-2-2-2 2-2-2-3 2V4a1 1 0 011-1zm2 5v2h8V8H8zm0 4v2h6v-2H8z"/></svg>',
+};
+const LINK_LABELS = { x: 'X', line: 'LINE', menu: 'Full menu' };
+
+function renderPanel() {
+  const s = CONFIG.shop;
+  $('shopKicker').textContent = s.kicker;
+  $('shopName').textContent = s.name;
+  $('shopLocal').textContent = s.local || '';
+  $('shopTag').textContent = s.tagline;
+  $('sampleTag').hidden = !CONFIG.sampleMenu;
+  $('links').innerHTML = Object.keys(LINK_LABELS).map((k) => {
+    const url = s.links[k];
+    return url
+      ? `<a href="${url}" target="_blank" rel="noopener">${ICONS[k]}${LINK_LABELS[k]}</a>`
+      : `<span title="Link not set yet">${ICONS[k]}${LINK_LABELS[k]}</span>`;
+  }).join('');
+  $('menu').innerHTML = CONFIG.items.map((it, i) => `
+    <label class="item">
+      <input type="radio" name="item" id="item-${it.id}" value="${it.id}" ${i === 0 ? 'checked' : ''}>
+      <span class="dot" aria-hidden="true"></span>
+      <span><span class="t">${it.name}${it.local ? `<small>${it.local}</small>` : ''}</span><br><span class="d">${it.desc}</span></span>
+      <span class="price">${money(it.price)}</span>
+    </label>`).join('');
+  $('addons').innerHTML = CONFIG.addons.map((a) => `
+    <label class="addon"><input type="checkbox" id="addon-${a.id}" value="${a.id}">${a.name} <span class="price">+${money(a.price)}</span></label>`).join('');
+}
+
+let qty = 1;
+function currentItem() {
+  const v = document.querySelector('input[name="item"]:checked')?.value;
+  return CONFIG.items.find((i) => i.id === v) || CONFIG.items[0];
+}
+function updateOrder() {
+  const it = currentItem();
+  const adds = CONFIG.addons.filter((a) => $('addon-' + a.id)?.checked);
+  const each = it.price + adds.reduce((t, a) => t + a.price, 0);
+  $('qty').textContent = qty;
+  $('total').textContent = money(each * qty);
+  const text = `${qty} × ${it.name}${adds.length ? ' + ' + adds.map((a) => a.name).join(', ') : ''} — ${money(each * qty)}`;
+  $('summary').textContent = text;
+  $('nowName').textContent = it.name;
+  const line = CONFIG.shop.links.line;
+  const btn = $('orderBtn');
+  if (line) { btn.href = line; btn.removeAttribute('aria-disabled'); }
+  else { btn.removeAttribute('href'); btn.setAttribute('aria-disabled', 'true'); btn.title = 'LINE link not set yet'; }
+  return text;
+}
+
+/* ---------- 3D ---------- */
+const stageEl = $('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stageEl.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 100);
+camera.position.set(3.6, 2.6, 4.6);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 0.8;
+controls.maxDistance = 10;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.target.set(0, 1, 0);
+controls.autoRotate = !reduceMotion;
+controls.autoRotateSpeed = 0.6;
+controls.addEventListener('start', () => { controls.autoRotate = false; });
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8d8572, 0.85));
+const sun = new THREE.DirectionalLight(0xfff3e0, 1.25);
+sun.position.set(3, 6, 4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 0.5, far: 20 });
+sun.shadow.bias = -0.0005;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xdfeaff, 0.35);
+fill.position.set(-4, 3, -2);
+scene.add(fill);
+
+const ground = new THREE.Mesh(new THREE.CircleGeometry(6, 64), new THREE.ShadowMaterial({ opacity: 0.16 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const cartHolder = new THREE.Group();
+const foodSlot = new THREE.Group();
+scene.add(cartHolder, foodSlot);
+
+const loader = new THREE.GLTFLoader();
+const loadGLB = (url) => new Promise((res, rej) => loader.load(url, (g) => res(g.scene), undefined, rej));
+
+function prep(obj) {
+  obj.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true; o.receiveShadow = true;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach((m) => { if (m && m.map) m.map.encoding = THREE.sRGBEncoding; });
+    }
+  });
+  return obj;
+}
+/* Wrap, scale so the longest horizontal side = size, centre on x/z, sit on y=0. */
+function fit(obj, size, rotYdeg = 0) {
+  const pivot = new THREE.Group();
+  const inner = new THREE.Group();
+  inner.rotation.y = THREE.MathUtils.degToRad(rotYdeg);
+  inner.add(obj);
+  pivot.add(inner);
+  pivot.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(pivot);
+  const s = box.getSize(new THREE.Vector3());
+  const k = size / Math.max(s.x, s.z, 1e-6);
+  inner.scale.setScalar(k);
+  pivot.updateMatrixWorld(true);
+  box.setFromObject(pivot);
+  const c = box.getCenter(new THREE.Vector3());
+  inner.position.set(-c.x, -box.min.y, -c.z);
+  return pivot;
+}
+
+/* --- stand-in cart --- */
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+  return t;
+}
+function makeCart() {
+  const g = new THREE.Group();
+  const std = (color, rough = 0.6, metal = 0) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
+  const steel = std(0xc9ccc8, 0.35, 0.7), body = std(0x2f6b45, 0.55), wood = std(0xb07a46, 0.7), dark = std(0x222222, 0.4, 0.5);
+  [[-0.75, 0.48], [0.75, 0.48], [-0.75, -0.48], [0.75, -0.48]].forEach(([x, z]) => {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.08, 32), dark);
+    w.rotation.x = Math.PI / 2; w.position.set(x, 0.22, z); g.add(w);
+  });
+  const b = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.75, 0.9), body); b.position.set(0, 0.65, 0); g.add(b);
+  const sign = canvasTex(1024, 256, (x, w, h) => {
+    x.fillStyle = '#f4efe2'; x.fillRect(0, 0, w, h);
+    x.fillStyle = '#2f6b45'; x.font = '800 92px "Bricolage Grotesque", sans-serif'; x.textBaseline = 'middle';
+    x.fillText(CONFIG.shop.name, 48, h / 2 + 4);
+    x.fillStyle = '#b9741c'; x.font = '700 92px "Noto Sans TC", sans-serif'; x.textAlign = 'right';
+    x.fillText(CONFIG.shop.local || '', w - 48, h / 2 + 4);
+  });
+  const sp = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.42), new THREE.MeshStandardMaterial({ map: sign, roughness: 0.8 }));
+  sp.position.set(0, 0.68, 0.452); g.add(sp);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.06, 1.1), steel); top.position.set(0, 1.06, 0.05); g.add(top);
+  const grid = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.6), dark); grid.position.set(-0.45, 1.115, 0); g.add(grid);
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.03, 0.42), wood); board.position.set(0.45, 1.105, 0.3); g.add(board);
+  [[-1.0, 0.45], [1.0, 0.45], [-1.0, -0.45], [1.0, -0.45]].forEach(([x, z]) => {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.1, 12), steel); p.position.set(x, 1.64, z); g.add(p);
+  });
+  const stripes = canvasTex(512, 64, (x, w, h) => { for (let i = 0; i < 16; i++) { x.fillStyle = i % 2 ? '#f4efe2' : '#2f6b45'; x.fillRect(i * w / 16, 0, w / 16, h); } });
+  const aw = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.06, 1.3), [std(0x2f6b45), std(0x2f6b45), new THREE.MeshStandardMaterial({ map: stripes, roughness: 0.8 }), std(0x2f6b45), new THREE.MeshStandardMaterial({ map: stripes, roughness: 0.8 }), std(0x2f6b45)]);
+  aw.position.set(0, 2.2, 0); g.add(aw);
+  return g;
+}
+
+/* --- stand-in food --- */
+function makeBing(look) {
+  const g = new THREE.Group();
+  const seeded = (n) => { let s = n; return () => (s = (s * 9301 + 49297) % 233280) / 233280; };
+  const rnd = seeded(look.length * 7 + 3);
+  const crust = new THREE.MeshStandardMaterial({ color: 0xd49a45, roughness: 0.75 });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.205, 0.045, 48), crust);
+  base.position.y = 0.0225; g.add(base);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.02, 48), new THREE.MeshStandardMaterial({ color: 0xe0ad5a, roughness: 0.7 }));
+  top.position.y = 0.055; g.add(top);
+  const add = (geo, color, n, y, r = 0.16) => {
+    const m = new THREE.MeshStandardMaterial({ color, roughness: 0.6 });
+    for (let i = 0; i < n; i++) {
+      const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * r;
+      const p = new THREE.Mesh(geo, m); p.position.set(Math.cos(a) * d, y, Math.sin(a) * d); p.rotation.y = rnd() * 3; g.add(p);
+    }
+  };
+  if (look === 'egg') {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.16, 0.012, 40), new THREE.MeshStandardMaterial({ color: 0xfaf6ea, roughness: 0.5 }));
+    w.position.y = 0.071; g.add(w);
+    const y = new THREE.Mesh(new THREE.SphereGeometry(0.055, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xf2a91a, roughness: 0.35 }));
+    y.position.y = 0.075; y.scale.y = 0.6; g.add(y);
+  }
+  if (look === 'pork') add(new THREE.DodecahedronGeometry(0.018), 0x7a4a2c, 40, 0.072);
+  if (look === 'cheese') {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.016, 7), new THREE.MeshStandardMaterial({ color: 0xf6c84a, roughness: 0.4 }));
+    c.position.y = 0.072; c.rotation.y = 0.4; g.add(c);
+    add(new THREE.SphereGeometry(0.006, 6, 4), 0x222222, 30, 0.083, 0.13);
+  }
+  add(new THREE.CylinderGeometry(0.007, 0.007, 0.02, 6), 0x4c9a3a, look === 'plain' ? 46 : 22, look === 'plain' ? 0.068 : 0.088, 0.15);
+  if (look === 'plain') add(new THREE.SphereGeometry(0.004, 6, 4), 0xf3ead5, 40, 0.066);
+  return g;
+}
+
+/* --- state --- */
+let cartPivot = null;
+let cartAnchor = PROC_ANCHOR;
+let anchorPoint = new THREE.Vector3(0.45, 1.09, 0.3);
+const foodCache = new Map();   // id -> pivot
+let shownId = null;
+const tweens = [];
+const tween = (dur, fn, done) => { if (reduceMotion) { fn(1); done && done(); return; } tweens.push({ t0: performance.now(), dur, fn, done }); };
+const ease = (p) => 1 - Math.pow(1 - p, 3);
+const back = (p) => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+
+function computeAnchor() {
+  cartHolder.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(cartHolder);
+  const s = box.getSize(new THREE.Vector3());
+  anchorPoint = new THREE.Vector3(box.min.x + s.x * cartAnchor.x, box.min.y + s.y * cartAnchor.y, box.min.z + s.z * cartAnchor.z);
+  foodSlot.position.copy(anchorPoint);
+}
+
+async function setCart(source, isProcedural) {
+  let obj = isProcedural ? makeCart() : prep(await loadGLB(source));
+  if (isProcedural) prep(obj);
+  const pivot = fit(obj, CONFIG.cart.width, isProcedural ? 0 : CONFIG.cart.rotY);
+  cartHolder.clear();
+  cartHolder.add(pivot);
+  cartPivot = pivot;
+  cartAnchor = isProcedural ? PROC_ANCHOR : CONFIG.cart.anchor;
+  computeAnchor();
+}
+
+async function getFood(item) {
+  if (foodCache.has(item.id)) return foodCache.get(item.id);
+  let obj;
+  if (item.model) {
+    try { obj = prep(await loadGLB(item.model)); }
+    catch (e) { console.warn('[csb] food model failed, using stand-in', item.model, e); }
+  }
+  if (!obj) obj = prep(makeBing(item.look || 'plain'));
+  const pivot = fit(obj, CONFIG.cart.foodSize, item.rotY || 0);
+  pivot.visible = false;
+  foodSlot.add(pivot);
+  foodCache.set(item.id, pivot);
+  return pivot;
+}
+
+let swapToken = 0;
+async function showFood(item) {
+  const my = ++swapToken;
+  const next = await getFood(item);
+  if (my !== swapToken) return;
+  const prevId = shownId;
+  shownId = item.id;
+  foodCache.forEach((p, id) => { if (id !== item.id && id !== prevId) p.visible = false; });
+  const prev = prevId && prevId !== item.id ? foodCache.get(prevId) : null;
+  if (prev) tween(220, (p) => { prev.scale.setScalar(1 - ease(p)); prev.position.y = 0.15 * ease(p); }, () => { prev.visible = false; prev.scale.setScalar(1); prev.position.y = 0; });
+  next.visible = true;
+  next.rotation.y = 0;
+  tween(520, (p) => { next.scale.setScalar(Math.max(0.001, back(p))); next.position.y = 0.25 * (1 - ease(p)); next.rotation.y = (1 - ease(p)) * 1.2; });
+}
+
+function flyTo(mode) {
+  $('viewCart').setAttribute('aria-pressed', String(mode === 'cart'));
+  $('viewFood').setAttribute('aria-pressed', String(mode === 'food'));
+  const fromP = camera.position.clone(), fromT = controls.target.clone();
+  let toP, toT;
+  if (mode === 'food') {
+    const d = CONFIG.cart.foodSize;
+    toT = anchorPoint.clone().add(new THREE.Vector3(0, d * 0.15, 0));
+    toP = toT.clone().add(new THREE.Vector3(d * 2.4, d * 2.2, d * 3.6));
+  } else {
+    toT = new THREE.Vector3(0, 1.0, 0);
+    toP = new THREE.Vector3(3.6, 2.6, 4.6);
+  }
+  tween(900, (p) => { const e = ease(p); camera.position.lerpVectors(fromP, toP, e); controls.target.lerpVectors(fromT, toT, e); });
+}
+
+function resize() {
+  const r = stageEl.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / Math.max(1, r.height);
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stageEl);
+
+function loop(now) {
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const t = tweens[i]; const p = Math.min(1, (now - t.t0) / t.dur);
+    t.fn(p); if (p >= 1) { tweens.splice(i, 1); t.done && t.done(); }
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+
+/* ---------- toast, drop, tune ---------- */
+let toastTimer;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600); }
+
+stageEl.addEventListener('dragover', (e) => { e.preventDefault(); $('dropVeil').hidden = false; });
+stageEl.addEventListener('dragleave', (e) => { if (!stageEl.contains(e.relatedTarget)) $('dropVeil').hidden = true; });
+stageEl.addEventListener('drop', async (e) => {
+  e.preventDefault(); $('dropVeil').hidden = true;
+  const f = [...(e.dataTransfer?.files || [])].find((x) => /\.glb$/i.test(x.name));
+  if (!f) { toast('Drop a .glb file (a .gltf with separate files will not load)'); return; }
+  const url = URL.createObjectURL(f);
+  try {
+    if (/cart/i.test(f.name)) {
+      const prevModel = CONFIG.cart.model; CONFIG.cart.model = url;
+      try { await setCart(url, false); } catch (err) { CONFIG.cart.model = prevModel; throw err; }
+      toast('Cart swapped: ' + f.name);
+    } else {
+      const it = currentItem();
+      const old = foodCache.get(it.id); if (old) { foodSlot.remove(old); foodCache.delete(it.id); }
+      it.model = url; shownId = null;
+      await showFood(it);
+      toast(it.name + ' now uses ' + f.name);
+    }
+    renderTune();
+  } catch (err) { console.error('[csb] drop failed', err); toast('That file did not load. Is it Draco-compressed?'); }
+});
+
+function renderTune() {
+  if (location.hash !== '#tune') { $('tune').hidden = true; return; }
+  const el = $('tune'); el.hidden = false;
+  const a = cartAnchor;
+  const rows = [
+    ['ax', 'Anchor x', a.x, 0, 1, 0.005], ['ay', 'Anchor y', a.y, 0, 1, 0.005], ['az', 'Anchor z', a.z, 0, 1, 0.005],
+    ['fs', 'Food size', CONFIG.cart.foodSize, 0.1, 1.2, 0.01], ['ry', 'Cart turn°', CONFIG.cart.rotY, -180, 180, 5],
+  ];
+  el.innerHTML = '<b>Placement</b>' + rows.map(([id, l, v, mn, mx, st]) =>
+    `<label>${l}<input type="range" id="t-${id}" min="${mn}" max="${mx}" step="${st}" value="${v}"><span>${(+v).toFixed(2)}</span></label>`).join('') + '<pre id="t-out"></pre>';
+  const out = () => { $('t-out').textContent = JSON.stringify({ rotY: CONFIG.cart.rotY, anchor: cartAnchor, foodSize: CONFIG.cart.foodSize }); };
+  out();
+  rows.forEach(([id]) => $('t-' + id).addEventListener('input', async (e) => {
+    const v = +e.target.value; e.target.nextElementSibling.textContent = v.toFixed(2);
+    if (id[0] === 'a') { cartAnchor = { ...cartAnchor, [id[1]]: v }; if (cartAnchor !== PROC_ANCHOR && CONFIG.cart.model) CONFIG.cart.anchor = cartAnchor; computeAnchor(); }
+    if (id === 'fs') { CONFIG.cart.foodSize = v; foodCache.forEach((p) => foodSlot.remove(p)); foodCache.clear(); shownId = null; await showFood(currentItem()); }
+    if (id === 'ry' && CONFIG.cart.model) { CONFIG.cart.rotY = v; await setCart(CONFIG.cart.model, false); }
+    out();
+  }));
+}
+addEventListener('hashchange', renderTune);
+
+/* ---------- boot ---------- */
+renderPanel();
+updateOrder();
+$('orderForm').addEventListener('submit', (e) => e.preventDefault());
+$('orderForm').addEventListener('change', (e) => {
+  updateOrder();
+  if (e.target.name === 'item') { showFood(currentItem()); if (!controls.autoRotate) flyTo('food'); }
+});
+$('qtyMinus').addEventListener('click', () => { qty = Math.max(1, qty - 1); updateOrder(); });
+$('qtyPlus').addEventListener('click', () => { qty = Math.min(20, qty + 1); updateOrder(); });
+$('viewCart').addEventListener('click', () => { controls.autoRotate = false; flyTo('cart'); });
+$('viewFood').addEventListener('click', () => { controls.autoRotate = false; flyTo('food'); });
+$('copyBtn').addEventListener('click', async () => {
+  const text = updateOrder();
+  try { await navigator.clipboard.writeText(text); toast('Order copied'); }
+  catch { const r = document.createRange(); r.selectNodeContents($('summary')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selected — press copy'); }
+});
+
+(async () => {
+  resize();
+  requestAnimationFrame(loop);
+  try {
+    if (CONFIG.cart.model) await setCart(CONFIG.cart.model, false);
+    else await setCart(null, true);
+  } catch (e) {
+    console.warn('[csb] cart model failed, using stand-in', e);
+    await setCart(null, true);
+  }
+  await showFood(currentItem());
+  // open on the counter, slightly wide
+  const d = CONFIG.cart.foodSize;
+  controls.target.copy(anchorPoint).add(new THREE.Vector3(-0.4, 0.1, 0));
+  camera.position.copy(controls.target).add(new THREE.Vector3(d * 6, d * 4.2, d * 8));
+  $('loading').hidden = true;
+  renderTune();
+})();
+</script>
+</body>
+</html>
