@@ -27,3 +27,8 @@ You can also drag a `.glb` onto the 3D view to preview it without editing anythi
 ## Menu, prices, links
 
 The menu, prices and links all live in the same `CONFIG` block (`shop`, `items`, `addons`). Set `sampleMenu: false` once the real menu is in.
+
+## Team
+
+- Cary Jay Forest: 3D storefront, Tripo models
+- Zhu Lin: merchant view and order queue, pay options
