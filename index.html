@@ -264,9 +264,8 @@ button, input { font: inherit; color: inherit; }
         </div>
         <div class="summary" id="summary"></div>
         <div class="cta">
-          <a class="btn primary" id="orderBtn" target="_blank" rel="noopener">Order on LINE</a>
-          <button type="button" class="btn" id="copyBtn">Copy order</button>
-          <button type="button" class="btn" id="checkoutBtn">Send to kitchen</button>
+          <button type="button" class="btn primary" id="payLineBtn">Pay with LINE</button>
+          <button type="button" class="btn" id="payCashBtn">Pay with Cash</button>
         </div>
       </div>
     </form>
@@ -360,10 +359,6 @@ function updateOrder() {
   const text = `${qty} × ${it.name}${adds.length ? ' + ' + adds.map((a) => a.name).join(', ') : ''} — ${money(each * qty)}`;
   $('summary').textContent = text;
   $('nowName').textContent = it.name;
-  const line = CONFIG.shop.links.line;
-  const btn = $('orderBtn');
-  if (line) { btn.href = line; btn.removeAttribute('aria-disabled'); }
-  else { btn.removeAttribute('href'); btn.setAttribute('aria-disabled', 'true'); btn.title = 'LINE link not set yet'; }
   return text;
 }
 
@@ -709,11 +704,6 @@ $('qtyMinus').addEventListener('click', () => { qty = Math.max(1, qty - 1); upda
 $('qtyPlus').addEventListener('click', () => { qty = Math.min(20, qty + 1); updateOrder(); });
 $('viewCart').addEventListener('click', () => { controls.autoRotate = false; flyTo('cart'); });
 $('viewFood').addEventListener('click', () => { controls.autoRotate = false; flyTo('food'); });
-$('copyBtn').addEventListener('click', async () => {
-  const text = updateOrder();
-  try { await navigator.clipboard.writeText(text); toast('Order copied'); }
-  catch { const r = document.createRange(); r.selectNodeContents($('summary')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selected — press copy'); }
-});
 
 (async () => {
   resize();
@@ -748,7 +738,8 @@ $('copyBtn').addEventListener('click', async () => {
     clear: document.getElementById('mClear'),
     counts: document.getElementById('mCounts'),
     tickets: document.getElementById('mTickets'),
-    checkout: document.getElementById('checkoutBtn')
+    payLine: document.getElementById('payLineBtn'),
+    payCash: document.getElementById('payCashBtn')
   };
   function node(tag, cls, text) {
     var n = document.createElement(tag);
@@ -778,7 +769,7 @@ $('copyBtn').addEventListener('click', async () => {
       var main = node('span');
       main.appendChild(node('span', 't', o.ticket + ' · ' + o.status));
       main.appendChild(document.createElement('br'));
-      main.appendChild(node('span', 'd', o.qty + ' × ' + o.name + (o.addons.length ? ' [' + o.addons.join(', ') + ']' : '') + ' · ' + o.time));
+      main.appendChild(node('span', 'd', o.qty + ' × ' + o.name + (o.addons.length ? ' [' + o.addons.join(', ') + ']' : '') + ' · ' + o.time + (o.pay ? ' · pay ' + o.pay : '')));
       var actions = node('span', 'addons');
       if (NEXT[o.status]) {
         var adv = node('button', 'btn primary', 'Advance → ' + NEXT[o.status]);
@@ -812,17 +803,21 @@ $('copyBtn').addEventListener('click', async () => {
   el.tabOrder.addEventListener('click', function () { selectTab(false); });
   el.tabMerchant.addEventListener('click', function () { selectTab(true); });
   el.clear.addEventListener('click', function () { save(load().filter(function (o) { return o.status !== 'done'; })); render(); });
-  el.checkout.addEventListener('click', function () {
+  function placeOrder(pay) {
     var item = currentItem();
     var adds = CONFIG.addons.filter(function (a) { var b = document.getElementById('addon-' + a.id); return b && b.checked; });
     var each = item.price + adds.reduce(function (t, a) { return t + a.price; }, 0);
     var orders = load();
-    orders.push({ id: Date.now(), ticket: nextTicket(), name: item.name, qty: qty,
-      addons: adds.map(function (a) { return a.name; }), total: each * qty, status: 'queued', time: new Date().toLocaleTimeString() });
+    var ticket = nextTicket();
+    orders.push({ id: Date.now(), ticket: ticket, name: item.name, qty: qty,
+      addons: adds.map(function (a) { return a.name; }), total: each * qty, status: 'queued', pay: pay, time: new Date().toLocaleTimeString() });
     save(orders);
-    toast('Sent ' + orders[orders.length - 1].ticket);
+    toast('Sent ' + ticket + ' · ' + pay);
     if (!el.merchant.hidden) render();
-  });
+    if (pay === 'line' && CONFIG.shop.links.line) window.open(CONFIG.shop.links.line, '_blank', 'noopener');
+  }
+  el.payLine.addEventListener('click', function () { placeOrder('line'); });
+  el.payCash.addEventListener('click', function () { placeOrder('cash'); });
   render();
 })();
 </script>
